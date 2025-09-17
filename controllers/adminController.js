@@ -1,88 +1,119 @@
-import { Sequelize } from "sequelize";
-import nodemailer from "nodemailer";
-import ejs from "ejs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { User, Url, Setting, Server, Click } from "../models/index.js";
+import { User, Link, Click } from '../models/index.js';
+import { sequelize } from '../models/index.js';
+import { Op } from 'sequelize';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const templatePath = path.join(__dirname,"../views/email_template.ejs");
+export const adminDashboard = async (req, res) => {
+  const totalUsers = await User.count();
+  const totalLinks = await Link.count();
+  const totalClicks = await Click.count();
 
-export const dashboard=async(req,res)=>{
-  const totalLinks=await Url.count();
-  const totalClicks=await Url.sum("clicks")||0;
-  const totalUsers=await User.count();
-  const recent=await Url.findAll({ limit:10, order:[["createdAt","DESC"]] });
+  const range = parseInt(req.query.range || '7');
+  const startDate = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
 
-  const topCountries=await Click.findAll({
-    attributes:["country",[Sequelize.fn("COUNT",Sequelize.col("id")),"count"]],
-    group:["country"], order:[[Sequelize.literal("count"),"DESC"]], limit:5
+  const clicksByDay = await Click.findAll({
+    attributes: [
+      [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+    ],
+    where: { createdAt: { [Op.gte]: startDate } },
+    group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+    order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
   });
 
-  res.render("dashboard",{
-    stats:{ totalLinks,totalClicks,totalUsers },
-    recent,
-    chartLabels: topCountries.map(c=>c.country||"Unknown"),
-    chartData: topCountries.map(c=>Number(c.get("count")))
+  const topLinks = await Click.findAll({
+    attributes: ['linkId', [sequelize.fn('COUNT', sequelize.col('id')), 'clickCount']],
+    include: [{ model: Link, attributes: ['id','code','title'], include: [{ model: User, attributes: ['name'] }] }],
+    where: { createdAt: { [Op.gte]: startDate } },
+    group: ['linkId','link.id','link->user.id'],
+    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+    limit: 5
   });
+
+  const topCountries = await Click.findAll({
+    attributes: ['country', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+    where: { createdAt: { [Op.gte]: startDate } },
+    group: ['country'],
+    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+    limit: 5
+  });
+
+  const topBrowsers = await Click.findAll({
+    attributes: [
+      [sequelize.fn('SUBSTRING_INDEX', sequelize.col('ua'), ' ', 1), 'browser'],
+      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+    ],
+    where: { createdAt: { [Op.gte]: startDate } },
+    group: ['browser'],
+    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
+    limit: 5
+  });
+
+  const deviceDist = await Click.findAll({
+    attributes: ['device', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+    where: { createdAt: { [Op.gte]: startDate } },
+    group: ['device']
+  });
+
+  const chartData = {
+    labels: clicksByDay.map(c => c.dataValues.date),
+    values: clicksByDay.map(c => c.dataValues.count)
+  };
+
+  res.render('admin/dashboard', { totalUsers, totalLinks, totalClicks, chartData, topLinks, topCountries, topBrowsers, deviceDist, range });
 };
 
-export const urls=async(req,res)=>{
-  const list=await Url.findAll({ order:[["createdAt","DESC"]] });
-  res.render("urls",{ list });
+export const usersTable = async (req, res) => {
+  const users = await User.findAll({ order: [['id','DESC']] });
+  res.render('admin/users', { users });
+};
+export const toggleUser = async (req, res) => {
+  const user = await User.findByPk(req.params.id);
+  if (!user) return res.redirect('/admin/users');
+  user.status = user.status === 'active' ? 'suspended' : 'active';
+  await user.save();
+  res.redirect('/admin/users');
+};
+export const linksTable = async (req, res) => {
+  const links = await Link.findAll({ include: [{ model: User, attributes: ['name','email'] }], order: [['id','DESC']] });
+  res.render('admin/links', { links });
 };
 
-export const urlAnalytics=async(req,res)=>{
-  const url=await Url.findByPk(req.params.id,{ include:[Click] });
-  if(!url){ req.flash("error","URL tidak ada"); return res.redirect("/admin/urls"); }
-  res.render("url_analytics",{ url, clicks:url.Clicks });
-};
+export const linkStats = async (req, res) => {
+  const { id } = req.params;
+  const link = await Link.findByPk(id, { include: User });
+  if (!link) return res.status(404).send('Link tidak ditemukan');
 
-export const users=async(req,res)=>{
-  const list=await User.findAll({ order:[["createdAt","DESC"]] });
-  res.render("users",{ list });
-};
+  const clicksByDay = await Click.findAll({
+    attributes: [
+      [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
+      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+    ],
+    where: { linkId: id },
+    group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
+    order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
+  });
+  const chartData = {
+    labels: clicksByDay.map(c => c.dataValues.date),
+    values: clicksByDay.map(c => c.dataValues.count)
+  };
 
-export const getSettings=async(req,res)=>{
-  const ad=(await Setting.findOne({where:{key:"adsterra_js"}}))?.value||"";
-  res.render("settings",{ adsterra: ad });
-};
-export const saveSettings=async(req,res)=>{
-  await Setting.upsert({ key:"adsterra_js", value:req.body.adsterra_js||"" });
-  req.flash("success","Settings tersimpan");
-  res.redirect("/admin/settings");
-};
+  const clicksByCountry = await Click.findAll({
+    attributes: ['country', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+    where: { linkId: id }, group: ['country'], order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+  });
+  const clicksByDevice = await Click.findAll({
+    attributes: ['device', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+    where: { linkId: id }, group: ['device']
+  });
+  const clicksByBrowser = await Click.findAll({
+    attributes: [
+      [sequelize.fn('SUBSTRING_INDEX', sequelize.col('ua'), ' ', 1), 'browser'],
+      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+    ],
+    where: { linkId: id }, group: ['browser'], order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+  });
 
-export const getSMTP=async(req,res)=>{
-  const keys=["smtp_host","smtp_port","smtp_user","smtp_pass","smtp_from"];
-  const values={}; for(const k of keys) values[k]=(await Setting.findOne({where:{key:k}}))?.value||"";
-  res.render("smtp",{ values });
-};
-export const saveSMTP=async(req,res)=>{
-  for(const k of ["smtp_host","smtp_port","smtp_user","smtp_pass","smtp_from"])
-    await Setting.upsert({ key:k, value:req.body[k]||"" });
-  req.flash("success","SMTP updated");
-  res.redirect("/admin/smtp");
-};
-export const testSMTP=async(req,res)=>{
-  const to=req.body.to;
-  if(!to){ req.flash("error","Email tujuan kosong"); return res.redirect("/admin/smtp"); }
-  const host=(await Setting.findOne({where:{key:"smtp_host"}}))?.value;
-  const port=(await Setting.findOne({where:{key:"smtp_port"}}))?.value;
-  const userMail=(await Setting.findOne({where:{key:"smtp_user"}}))?.value;
-  const pass=(await Setting.findOne({where:{key:"smtp_pass"}}))?.value;
-  const from=(await Setting.findOne({where:{key:"smtp_from"}}))?.value || "no-reply@short.local";
-  try{
-    const t=nodemailer.createTransport({ host, port:Number(port||587), secure:false, auth:(userMail&&pass)?{user:userMail,pass}:undefined });
-    const html=await ejs.renderFile(templatePath,{
-      subject:"Test Email",
-      message:"Ini adalah email percobaan dari ShortURL App.",
-      buttonUrl: process.env.APP_BASE_URL,
-      buttonText:"Buka Website"
-    });
-    await t.sendMail({ from,to,subject:"Test Email",html });
-    req.flash("success","Test email terkirim ke "+to);
-  }catch(e){ req.flash("error","Gagal kirim: "+e.message); }
-  res.redirect("/admin/smtp");
+  const clicks = await Click.findAll({ where: { linkId: id }, order: [['id','DESC']] });
+
+  res.render('admin/stats', { link, chartData, clicks, clicksByCountry, clicksByDevice, clicksByBrowser });
 };
