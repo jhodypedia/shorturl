@@ -1,19 +1,21 @@
-import { User, Link, Click } from '../models/index.js';
+import { User, Link } from '../models/index.js';
 import { sequelize } from '../models/index.js';
-import { Op } from 'sequelize';
 
 // ===============================
 // Dashboard Admin
 // ===============================
 export const adminDashboard = async (req, res) => {
-  const totalUsers = await User.count();
-  const totalLinks = await Link.count();
-  const totalClicks = await Click.count();
+  const [totals] = await sequelize.query(`
+    SELECT 
+      (SELECT COUNT(*) FROM users) as totalUsers,
+      (SELECT COUNT(*) FROM links) as totalLinks,
+      (SELECT COUNT(*) FROM clicks) as totalClicks
+  `, { type: sequelize.QueryTypes.SELECT });
 
   const range = parseInt(req.query.range || '7');
   const startDate = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
 
-  // ✅ Raw SQL untuk statistik klik per hari
+  // ✅ Statistik klik per hari
   const clicksByDay = await sequelize.query(`
     SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') as date,
            COUNT(id) as count
@@ -26,44 +28,58 @@ export const adminDashboard = async (req, res) => {
     type: sequelize.QueryTypes.SELECT
   });
 
-  const topLinks = await Click.findAll({
-    attributes: ['linkId', [sequelize.fn('COUNT', sequelize.col('id')), 'clickCount']],
-    include: [
-      {
-        model: Link,
-        attributes: ['id', 'code', 'title'],
-        include: [{ model: User, attributes: ['name'] }]
-      }
-    ],
-    where: { createdAt: { [Op.gte]: startDate } },
-    group: ['linkId', 'link.id', 'link->user.id'],
-    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
-    limit: 5
+  // ✅ Top 5 links
+  const topLinks = await sequelize.query(`
+    SELECT l.id, l.code, l.title, u.name,
+           COUNT(c.id) as clickCount
+    FROM clicks c
+    JOIN links l ON l.id = c.linkId
+    JOIN users u ON u.id = l.userId
+    WHERE c.createdAt >= :startDate
+    GROUP BY l.id, l.code, l.title, u.name
+    ORDER BY clickCount DESC
+    LIMIT 5
+  `, {
+    replacements: { startDate },
+    type: sequelize.QueryTypes.SELECT
   });
 
-  const topCountries = await Click.findAll({
-    attributes: ['country', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-    where: { createdAt: { [Op.gte]: startDate } },
-    group: ['country'],
-    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
-    limit: 5
+  // ✅ Top countries
+  const topCountries = await sequelize.query(`
+    SELECT country, COUNT(id) as count
+    FROM clicks
+    WHERE createdAt >= :startDate
+    GROUP BY country
+    ORDER BY count DESC
+    LIMIT 5
+  `, {
+    replacements: { startDate },
+    type: sequelize.QueryTypes.SELECT
   });
 
-  const topBrowsers = await Click.findAll({
-    attributes: [
-      [sequelize.fn('SUBSTRING_INDEX', sequelize.col('ua'), ' ', 1), 'browser'],
-      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-    ],
-    where: { createdAt: { [Op.gte]: startDate } },
-    group: ['browser'],
-    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
-    limit: 5
+  // ✅ Top browsers
+  const topBrowsers = await sequelize.query(`
+    SELECT TRIM(SUBSTRING_INDEX(ua, ' ', 1)) as browser,
+           COUNT(id) as count
+    FROM clicks
+    WHERE createdAt >= :startDate
+    GROUP BY browser
+    ORDER BY count DESC
+    LIMIT 5
+  `, {
+    replacements: { startDate },
+    type: sequelize.QueryTypes.SELECT
   });
 
-  const deviceDist = await Click.findAll({
-    attributes: ['device', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-    where: { createdAt: { [Op.gte]: startDate } },
-    group: ['device']
+  // ✅ Device distribution
+  const deviceDist = await sequelize.query(`
+    SELECT device, COUNT(id) as count
+    FROM clicks
+    WHERE createdAt >= :startDate
+    GROUP BY device
+  `, {
+    replacements: { startDate },
+    type: sequelize.QueryTypes.SELECT
   });
 
   const chartData = {
@@ -72,9 +88,9 @@ export const adminDashboard = async (req, res) => {
   };
 
   res.render('admin/dashboard', {
-    totalUsers,
-    totalLinks,
-    totalClicks,
+    totalUsers: totals.totalUsers,
+    totalLinks: totals.totalLinks,
+    totalClicks: totals.totalClicks,
     chartData,
     topLinks,
     topCountries,
@@ -85,29 +101,38 @@ export const adminDashboard = async (req, res) => {
 };
 
 // ===============================
-// Management Users
+// Users Management
 // ===============================
 export const usersTable = async (req, res) => {
-  const users = await User.findAll({ order: [['id', 'DESC']] });
+  const users = await sequelize.query(`
+    SELECT * FROM users ORDER BY id DESC
+  `, { type: sequelize.QueryTypes.SELECT });
+
   res.render('admin/users', { users });
 };
 
 export const toggleUser = async (req, res) => {
-  const user = await User.findByPk(req.params.id);
-  if (!user) return res.redirect('/admin/users');
-  user.status = user.status === 'active' ? 'suspended' : 'active';
-  await user.save();
+  await sequelize.query(`
+    UPDATE users
+    SET status = CASE WHEN status = 'active' THEN 'suspended' ELSE 'active' END
+    WHERE id = :id
+  `, {
+    replacements: { id: req.params.id }
+  });
   res.redirect('/admin/users');
 };
 
 // ===============================
-// Management Links
+// Links Management
 // ===============================
 export const linksTable = async (req, res) => {
-  const links = await Link.findAll({
-    include: [{ model: User, attributes: ['name', 'email'] }],
-    order: [['id', 'DESC']]
-  });
+  const links = await sequelize.query(`
+    SELECT l.*, u.name, u.email
+    FROM links l
+    JOIN users u ON u.id = l.userId
+    ORDER BY l.id DESC
+  `, { type: sequelize.QueryTypes.SELECT });
+
   res.render('admin/links', { links });
 };
 
@@ -116,10 +141,19 @@ export const linksTable = async (req, res) => {
 // ===============================
 export const linkStats = async (req, res) => {
   const { id } = req.params;
-  const link = await Link.findByPk(id, { include: User });
+
+  const [link] = await sequelize.query(`
+    SELECT l.*, u.name, u.email
+    FROM links l
+    JOIN users u ON u.id = l.userId
+    WHERE l.id = :id
+  `, {
+    replacements: { id },
+    type: sequelize.QueryTypes.SELECT
+  });
   if (!link) return res.status(404).send('Link tidak ditemukan');
 
-  // ✅ Raw SQL untuk statistik klik per hari per link
+  // ✅ Statistik klik per hari per link
   const clicksByDay = await sequelize.query(`
     SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') as date,
            COUNT(id) as count
@@ -137,32 +171,46 @@ export const linkStats = async (req, res) => {
     values: clicksByDay.map(c => c.count)
   };
 
-  const clicksByCountry = await Click.findAll({
-    attributes: ['country', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-    where: { linkId: id },
-    group: ['country'],
-    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+  const clicksByCountry = await sequelize.query(`
+    SELECT country, COUNT(id) as count
+    FROM clicks
+    WHERE linkId = :id
+    GROUP BY country
+    ORDER BY count DESC
+  `, {
+    replacements: { id },
+    type: sequelize.QueryTypes.SELECT
   });
 
-  const clicksByDevice = await Click.findAll({
-    attributes: ['device', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-    where: { linkId: id },
-    group: ['device']
+  const clicksByDevice = await sequelize.query(`
+    SELECT device, COUNT(id) as count
+    FROM clicks
+    WHERE linkId = :id
+    GROUP BY device
+  `, {
+    replacements: { id },
+    type: sequelize.QueryTypes.SELECT
   });
 
-  const clicksByBrowser = await Click.findAll({
-    attributes: [
-      [sequelize.fn('SUBSTRING_INDEX', sequelize.col('ua'), ' ', 1), 'browser'],
-      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-    ],
-    where: { linkId: id },
-    group: ['browser'],
-    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+  const clicksByBrowser = await sequelize.query(`
+    SELECT TRIM(SUBSTRING_INDEX(ua, ' ', 1)) as browser,
+           COUNT(id) as count
+    FROM clicks
+    WHERE linkId = :id
+    GROUP BY browser
+    ORDER BY count DESC
+  `, {
+    replacements: { id },
+    type: sequelize.QueryTypes.SELECT
   });
 
-  const clicks = await Click.findAll({
-    where: { linkId: id },
-    order: [['id', 'DESC']]
+  const clicks = await sequelize.query(`
+    SELECT * FROM clicks
+    WHERE linkId = :id
+    ORDER BY id DESC
+  `, {
+    replacements: { id },
+    type: sequelize.QueryTypes.SELECT
   });
 
   res.render('admin/stats', {
