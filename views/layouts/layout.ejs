@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <% include ../partials/head %>
+  <title><%= SITE_NAME %></title>
+</head>
+<body>
+  <% include ../partials/topbar %>
+  <div class="d-flex">
+    <% include ../partials/sidebar %>
+    <main class="flex-fill p-4">
+      <% include ../partials/flash %>
+      <%- body %>
+    </main>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/public/js/main.js"></script>
+</body>
+</html>
