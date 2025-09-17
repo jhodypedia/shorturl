@@ -1,16 +1,13 @@
-import { DataTypes } from "sequelize";
-import db from "../config/database.js";
-import Url from "./url.model.js";
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
-const Click = db.define("Click", {
-  ip: DataTypes.STRING,
-  userAgent: DataTypes.STRING,
-  referrer: DataTypes.STRING,
-  country: DataTypes.STRING,
-  city: DataTypes.STRING
+const Click = sequelize.define('clicks', {
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  linkId: { type: DataTypes.INTEGER, allowNull: false },
+  ip: { type: DataTypes.STRING, allowNull: true },
+  ua: { type: DataTypes.TEXT, allowNull: true },
+  country: { type: DataTypes.STRING(3), allowNull: true },
+  device: { type: DataTypes.STRING, allowNull: true },
+  referer: { type: DataTypes.TEXT, allowNull: true }
 });
-
-Url.hasMany(Click, { foreignKey: "urlId" });
-Click.belongsTo(Url, { foreignKey: "urlId" });
-
 export default Click;
