@@ -1,0 +1,49 @@
+<h3 class="mb-3">Link Saya</h3>
+<div class="card p-3">
+  <div class="d-flex justify-content-between align-items-center">
+    <h5>Daftar Link</h5>
+    <a href="/links/new" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Link Baru</a>
+  </div>
+
+  <div class="table-responsive mt-3">
+    <table class="table table-striped datatable">
+      <thead class="table-dark">
+        <tr>
+          <th>Kode</th>
+          <th>Judul</th>
+          <th>Target</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% links.forEach(l => { %>
+          <tr>
+            <td><%= l.code %></td>
+            <td><%= l.title || '-' %></td>
+            <td style="max-width:280px; word-break:break-all;"><%= l.target %></td>
+            <td>
+              <span class="badge bg-<%= l.enabled ? 'success' : 'danger' %>">
+                <%= l.enabled ? 'Aktif' : 'Nonaktif' %>
+              </span>
+            </td>
+            <td>
+              <a class="btn btn-sm btn-outline-secondary" href="/links/<%= l.id %>/edit">
+                <i class="fa fa-pen"></i>
+              </a>
+              <form class="d-inline" method="post" action="/links/<%= l.id %>/delete">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Hapus link ini?')">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </form>
+              <a class="btn btn-sm btn-outline-primary" target="_blank" href="/s/<%= l.code %>">
+                <i class="fa fa-arrow-right"></i>
+              </a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
