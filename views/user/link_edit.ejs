@@ -1,0 +1,13 @@
+<h3 class="mb-3">Edit Link</h3>
+<div class="card p-3">
+  <form method="post" action="/links/<%= link.id %>">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="mb-3"><label>Target URL</label><input class="form-control" name="target" value="<%= link.target %>" required></div>
+    <div class="mb-3"><label>Judul</label><input class="form-control" name="title" value="<%= link.title || '' %>"></div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="enabled" name="enabled" <%= link.enabled ? 'checked' : '' %> >
+      <label class="form-check-label" for="enabled">Aktif</label>
+    </div>
+    <button class="btn btn-primary">Update</button>
+  </form>
+</div>
