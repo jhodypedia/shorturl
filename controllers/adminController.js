@@ -10,15 +10,18 @@ export const adminDashboard = async (req, res) => {
   const range = parseInt(req.query.range || '7');
   const startDate = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
 
-  const clicksByDay = await Click.findAll({
-  attributes: [
-    [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d')"), 'date'],
-    [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-  ],
-  where: { createdAt: { [Op.gte]: startDate } },
-  group: [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d')")],
-  order: [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d') ASC")]
-});
+  // ✅ raw query untuk clicksByDay
+  const [clicksByDay] = await sequelize.query(`
+    SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') as date,
+           COUNT(id) as count
+    FROM Clicks
+    WHERE createdAt >= :startDate
+    GROUP BY DATE_FORMAT(createdAt, '%Y-%m-%d')
+    ORDER BY date ASC
+  `, {
+    replacements: { startDate },
+    type: sequelize.QueryTypes.SELECT
+  });
 
   const topLinks = await Click.findAll({
     attributes: ['linkId', [sequelize.fn('COUNT', sequelize.col('id')), 'clickCount']],
@@ -55,17 +58,28 @@ export const adminDashboard = async (req, res) => {
   });
 
   const chartData = {
-    labels: clicksByDay.map(c => c.dataValues.date),
-    values: clicksByDay.map(c => c.dataValues.count)
+    labels: clicksByDay.map(c => c.date),
+    values: clicksByDay.map(c => c.count)
   };
 
-  res.render('admin/dashboard', { totalUsers, totalLinks, totalClicks, chartData, topLinks, topCountries, topBrowsers, deviceDist, range });
+  res.render('admin/dashboard', {
+    totalUsers,
+    totalLinks,
+    totalClicks,
+    chartData,
+    topLinks,
+    topCountries,
+    topBrowsers,
+    deviceDist,
+    range
+  });
 };
 
 export const usersTable = async (req, res) => {
   const users = await User.findAll({ order: [['id','DESC']] });
   res.render('admin/users', { users });
 };
+
 export const toggleUser = async (req, res) => {
   const user = await User.findByPk(req.params.id);
   if (!user) return res.redirect('/admin/users');
@@ -73,8 +87,12 @@ export const toggleUser = async (req, res) => {
   await user.save();
   res.redirect('/admin/users');
 };
+
 export const linksTable = async (req, res) => {
-  const links = await Link.findAll({ include: [{ model: User, attributes: ['name','email'] }], order: [['id','DESC']] });
+  const links = await Link.findAll({
+    include: [{ model: User, attributes: ['name','email'] }],
+    order: [['id','DESC']]
+  });
   res.render('admin/links', { links });
 };
 
@@ -83,37 +101,58 @@ export const linkStats = async (req, res) => {
   const link = await Link.findByPk(id, { include: User });
   if (!link) return res.status(404).send('Link tidak ditemukan');
 
-  const clicksByDay = await Click.findAll({
-  attributes: [
-    [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d')"), 'date'],
-    [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-  ],
-  where: { linkId: id },
-  group: [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d')")],
-  order: [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d') ASC")]
-});
+  // ✅ raw query untuk clicksByDay per link
+  const [clicksByDay] = await sequelize.query(`
+    SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') as date,
+           COUNT(id) as count
+    FROM Clicks
+    WHERE linkId = :id
+    GROUP BY DATE_FORMAT(createdAt, '%Y-%m-%d')
+    ORDER BY date ASC
+  `, {
+    replacements: { id },
+    type: sequelize.QueryTypes.SELECT
+  });
+
   const chartData = {
-    labels: clicksByDay.map(c => c.dataValues.date),
-    values: clicksByDay.map(c => c.dataValues.count)
+    labels: clicksByDay.map(c => c.date),
+    values: clicksByDay.map(c => c.count)
   };
 
   const clicksByCountry = await Click.findAll({
     attributes: ['country', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-    where: { linkId: id }, group: ['country'], order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+    where: { linkId: id },
+    group: ['country'],
+    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
   });
+
   const clicksByDevice = await Click.findAll({
     attributes: ['device', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-    where: { linkId: id }, group: ['device']
+    where: { linkId: id },
+    group: ['device']
   });
+
   const clicksByBrowser = await Click.findAll({
     attributes: [
       [sequelize.fn('SUBSTRING_INDEX', sequelize.col('ua'), ' ', 1), 'browser'],
       [sequelize.fn('COUNT', sequelize.col('id')), 'count']
     ],
-    where: { linkId: id }, group: ['browser'], order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
+    where: { linkId: id },
+    group: ['browser'],
+    order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']]
   });
 
-  const clicks = await Click.findAll({ where: { linkId: id }, order: [['id','DESC']] });
+  const clicks = await Click.findAll({
+    where: { linkId: id },
+    order: [['id','DESC']]
+  });
 
-  res.render('admin/stats', { link, chartData, clicks, clicksByCountry, clicksByDevice, clicksByBrowser });
+  res.render('admin/stats', {
+    link,
+    chartData,
+    clicks,
+    clicksByCountry,
+    clicksByDevice,
+    clicksByBrowser
+  });
 };
