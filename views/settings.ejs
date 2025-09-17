@@ -1,9 +1,0 @@
-<h3>Settings</h3>
-<form method="post" action="/admin/settings" class="card p-3">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <div class="mb-3">
-    <label>Adsterra Script</label>
-    <textarea name="adsterra_js" rows="6" class="form-control" placeholder='<script src="//pl...js"></script>'><%= adsterra %></textarea>
-  </div>
-  <button class="btn btn-primary">Simpan</button>
-</form>
