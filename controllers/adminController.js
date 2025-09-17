@@ -11,14 +11,14 @@ export const adminDashboard = async (req, res) => {
   const startDate = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
 
   const clicksByDay = await Click.findAll({
-    attributes: [
-      [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
-      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-    ],
-    where: { createdAt: { [Op.gte]: startDate } },
-    group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
-    order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
-  });
+  attributes: [
+    [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'date'],
+    [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+  ],
+  where: { createdAt: { [Op.gte]: startDate } },
+  group: [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d')],
+  order: [[sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'ASC']]
+});
 
   const topLinks = await Click.findAll({
     attributes: ['linkId', [sequelize.fn('COUNT', sequelize.col('id')), 'clickCount']],
