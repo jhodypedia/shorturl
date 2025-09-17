@@ -1,0 +1,8 @@
+<h3>Buat Short URL</h3>
+<form method="post" action="/shorten">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="input-group mb-3">
+    <input name="url" class="form-control" placeholder="https://example.com" required>
+    <button class="btn btn-primary">Shorten</button>
+  </div>
+</form>
