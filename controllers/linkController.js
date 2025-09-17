@@ -70,5 +70,5 @@ export const openShort = async (req, res) => {
   const adScript = (await Setting.findByPk('adsterra_script'))?.value || '';
   const antiAdblock = (await Setting.findByPk('anti_adblock'))?.value || 'off';
 
-  res.render('redirect/ads', { target: link.target, adUrl, adScript, siteName, antiAdblock });
+  res.render('redirect/ads', { layout: false, target: link.target, adUrl, adScript, siteName, antiAdblock });
 };
