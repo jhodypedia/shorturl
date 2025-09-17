@@ -1,0 +1,9 @@
+<h3 class="mb-3">Buat Link Baru</h3>
+<div class="card p-3">
+  <form method="post" action="/links">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="mb-3"><label>Target URL</label><input class="form-control" name="target" placeholder="https://..." required></div>
+    <div class="mb-3"><label>Judul (opsional)</label><input class="form-control" name="title"></div>
+    <button class="btn btn-primary">Simpan</button>
+  </form>
+</div>
