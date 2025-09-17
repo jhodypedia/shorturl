@@ -14,7 +14,7 @@
       margin: 0;
       min-height: 100vh;
       display: grid;
-      place-items: center; /* Pasti center horizontal + vertical */
+      place-items: center;
       padding: 1rem;
       overflow-x: hidden;
     }
@@ -47,7 +47,14 @@
       font-size: 52px;
       color: #0d6efd;
       margin-bottom: 1rem;
-      animation: pulse 1.5s infinite;
+    }
+    .redirect-icon i {
+      transition: transform .4s ease, color .4s ease;
+    }
+    .redirect-icon i.fa-check-circle {
+      font-size: 56px;
+      color: #22c55e;
+      animation: popIn .5s ease both;
     }
 
     /* ===== Text ===== */
@@ -102,9 +109,10 @@
       0% { transform: translateY(20px); opacity: 0; }
       100% { transform: translateY(0); opacity: 1; }
     }
-    @keyframes pulse {
-      0%,100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.1); opacity: .9; }
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      80% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); }
     }
 
     /* ===== Responsive ===== */
@@ -159,6 +167,9 @@
         clearInterval(timer);
         btn.disabled = false;
         btn.innerHTML = "Lanjutkan <i class='fa fa-arrow-right'></i>";
+        // ubah spinner jadi centang hijau
+        document.querySelector('.redirect-icon').innerHTML =
+          "<i class='fa fa-check-circle'></i>";
       }
     }, 1000);
 
