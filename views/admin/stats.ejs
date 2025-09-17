@@ -1,0 +1,53 @@
+<h3 class="mb-2">Statistik Klik - <%= link.title || link.code %></h3>
+<p>Owner: <%= link.user?.name %> (<%= link.user?.email %>)</p>
+
+<div class="card p-3 chart-card mb-4">
+  <canvas id="clickChart" height="120"></canvas>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4"><div class="card p-3 chart-card"><h6>Klik per Negara</h6><canvas id="countryChart"></canvas></div></div>
+  <div class="col-md-4"><div class="card p-3 chart-card"><h6>Device</h6><canvas id="deviceChart"></canvas></div></div>
+  <div class="col-md-4"><div class="card p-3 chart-card"><h6>Browser</h6><canvas id="browserChart"></canvas></div></div>
+</div>
+
+<div class="card p-3">
+  <h5>Detail Klik</h5>
+  <div class="table-responsive">
+    <table class="table table-striped datatable">
+      <thead class="table-dark"><tr><th>ID</th><th>IP</th><th>Negara</th><th>Device</th><th>Referer</th><th>Tanggal</th></tr></thead>
+      <tbody>
+        <% clicks.forEach(c => { %>
+        <tr>
+          <td><%= c.id %></td><td><%= c.ip||'-' %></td><td><%= c.country||'-' %></td>
+          <td><%= c.device||'-' %></td><td style="max-width:280px;word-break:break-all;"><%= c.referer||'-' %></td>
+          <td><%= c.createdAt.toLocaleString() %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const statsChart = new Chart(document.getElementById('clickChart'), {
+    type: 'line',
+    data: { labels: <%- JSON.stringify(chartData.labels) %>, datasets: [{ label:'Klik', data:<%- JSON.stringify(chartData.values) %>, fill:true }] },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+  });
+  const socket = io();
+  socket.on('new_click', data => {
+    if (data.linkId == <%= link.id %>) {
+      const today = data.date, idx = statsChart.data.labels.indexOf(today);
+      if (idx !== -1) statsChart.data.datasets[0].data[idx]++; else { statsChart.data.labels.push(today); statsChart.data.datasets[0].data.push(1); }
+      statsChart.update();
+    }
+  });
+
+  new Chart(document.getElementById('countryChart'), { type:'pie',
+    data:{ labels:<%- JSON.stringify(clicksByCountry.map(c=>c.country||'??')) %>, datasets:[{ data:<%- JSON.stringify(clicksByCountry.map(c=>c.dataValues.count)) %> }] }});
+  new Chart(document.getElementById('deviceChart'), { type:'doughnut',
+    data:{ labels:<%- JSON.stringify(clicksByDevice.map(c=>c.device||'Unknown')) %>, datasets:[{ data:<%- JSON.stringify(clicksByDevice.map(c=>c.dataValues.count)) %> }] }});
+  new Chart(document.getElementById('browserChart'), { type:'pie',
+    data:{ labels:<%- JSON.stringify(clicksByBrowser.map(c=>c.dataValues.browser||'Other')) %>, datasets:[{ data:<%- JSON.stringify(clicksByBrowser.map(c=>c.dataValues.count)) %> }] }});
+</script>
