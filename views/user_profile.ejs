@@ -1,0 +1,17 @@
+<h3>Profile Saya</h3>
+<form method="post" action="/user/profile" class="card p-3">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="mb-3">
+    <label>Email</label>
+    <input type="email" class="form-control" value="<%= user.email %>" disabled>
+  </div>
+  <div class="mb-3">
+    <label>Nama</label>
+    <input type="text" name="name" class="form-control" value="<%= user.name %>" required>
+  </div>
+  <div class="mb-3">
+    <label>Password Baru</label>
+    <input type="password" name="password" class="form-control" placeholder="Kosongkan jika tidak ganti (min 6)">
+  </div>
+  <button class="btn btn-primary">Simpan</button>
+</form>
