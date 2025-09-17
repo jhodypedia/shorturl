@@ -11,7 +11,7 @@ r.get('/links/:id/edit', requireAuth, editLinkForm);
 r.post('/links/:id', requireAuth, updateLink);
 r.post('/links/:id/delete', requireAuth, deleteLink);
 
-app.get('/r/:code', (req, res, next) => {
+r.get('/s/:code', (req, res, next) => {
   res.locals.layout = false;
   next();
 }, openShort);
