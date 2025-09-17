@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <% include ../partials/head %>
+  <%- include('../partials/head') %>
   <title><%= SITE_NAME %></title>
 </head>
 <body>
-  <% include ../partials/topbar %>
+  <%- include('../partials/topbar') %>
   <div class="d-flex">
-    <% include ../partials/sidebar %>
+    <%- include('../partials/sidebar') %>
     <main class="flex-fill p-4">
-      <% include ../partials/flash %>
+      <%- include('../partials/flash') %>
       <%- body %>
     </main>
   </div>
