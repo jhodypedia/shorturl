@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Link, Click, Setting, User } from '../models/index.js';
 import { UAParser } from 'ua-parser-js';
 import geoip from 'geoip-lite';
-const parser = new UAParser(req.headers['user-agent']);
+
 const genCode = () => uuidv4().split('-')[0];
 
 export const dashboard = async (req, res) => {
