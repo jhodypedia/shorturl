@@ -1,0 +1,14 @@
+<h3>All URLs</h3>
+<table class="table table-striped align-middle">
+  <thead><tr><th>Short</th><th>Original</th><th>Clicks</th><th>Aksi</th></tr></thead>
+  <tbody>
+    <% list.forEach(u=>{ %>
+    <tr>
+      <td><a href="/r/<%= u.shortCode %>" target="_blank"><%= u.shortCode %></a></td>
+      <td class="text-truncate" style="max-width:520px"><%= u.originalUrl %></td>
+      <td><%= u.clicks %></td>
+      <td><a href="/admin/urls/<%= u.id %>/analytics" class="btn btn-sm btn-info">Analytics</a></td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>
