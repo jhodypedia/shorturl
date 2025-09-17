@@ -84,14 +84,14 @@ export const linkStats = async (req, res) => {
   if (!link) return res.status(404).send('Link tidak ditemukan');
 
   const clicksByDay = await Click.findAll({
-    attributes: [
-      [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
-      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
-    ],
-    where: { linkId: id },
-    group: [sequelize.fn('DATE', sequelize.col('createdAt'))],
-    order: [[sequelize.fn('DATE', sequelize.col('createdAt')), 'ASC']]
-  });
+  attributes: [
+    [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'date'],
+    [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+  ],
+  where: { linkId: id },
+  group: [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d')],
+  order: [[sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'ASC']]
+});
   const chartData = {
     labels: clicksByDay.map(c => c.dataValues.date),
     values: clicksByDay.map(c => c.dataValues.count)
