@@ -1,0 +1,98 @@
+<h3 class="mb-4">Dashboard Admin</h3>
+
+<div class="row text-center mb-4">
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 kpi">
+      <div class="icon"><i class="fa fa-users"></i></div>
+      <div><div class="label">Total User</div><div class="value" id="totalUsers"><%= totalUsers %></div></div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 kpi">
+      <div class="icon"><i class="fa fa-link"></i></div>
+      <div><div class="label">Total Link</div><div class="value" id="totalLinks"><%= totalLinks %></div></div>
+    </div>
+  </div>
+  <div class="col-md-4 mb-3">
+    <div class="card p-3 kpi">
+      <div class="icon"><i class="fa fa-mouse-pointer"></i></div>
+      <div><div class="label">Total Klik</div><div class="value" id="totalClicks"><%= totalClicks %></div></div>
+    </div>
+  </div>
+</div>
+
+<form method="get" action="/admin" class="mb-3">
+  <label>Pilih Rentang Waktu:</label>
+  <select name="range" onchange="this.form.submit()" class="form-select" style="max-width:200px;display:inline-block">
+    <option value="7" <%= range==7 ? 'selected' : '' %>>7 Hari</option>
+    <option value="30" <%= range==30 ? 'selected' : '' %>>30 Hari</option>
+    <option value="90" <%= range==90 ? 'selected' : '' %>>3 Bulan</option>
+  </select>
+</form>
+
+<div class="card mb-4 p-3 chart-card">
+  <h5>Grafik Klik (<%= range %> hari terakhir)</h5>
+  <canvas id="clicksChart"></canvas>
+</div>
+
+<div class="card p-3 mt-3">
+  <h5>Top 5 Link Terpopuler</h5>
+  <div class="table-responsive mt-2">
+    <table class="table table-striped datatable">
+      <thead class="table-dark"><tr><th>Kode</th><th>Judul</th><th>Pemilik</th><th>Total Klik</th><th>Detail</th></tr></thead>
+      <tbody>
+        <% topLinks.forEach(t => { %>
+          <tr>
+            <td><%= t.link.code %></td>
+            <td><%= t.link.title || '-' %></td>
+            <td><%= t.link.user?.name || '-' %></td>
+            <td><%= t.dataValues.clickCount %></td>
+            <td><a href="/admin/links/<%= t.link.id %>/stats" class="btn btn-sm btn-outline-info"><i class="fa fa-chart-line"></i> Statistik</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row mb-4 mt-4">
+  <div class="col-md-4">
+    <div class="card p-3 chart-card"><h6>Top 5 Negara</h6><canvas id="countryChart"></canvas></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 chart-card"><h6>Top 5 Browser</h6><canvas id="browserChart"></canvas></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-3 chart-card"><h6>Device</h6><canvas id="deviceChart"></canvas></div>
+  </div>
+</div>
+
+<script>
+  const ctx = document.getElementById('clicksChart');
+  const clicksChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: <%- JSON.stringify(chartData.labels) %>, datasets: [{ label: 'Total Klik', data: <%- JSON.stringify(chartData.values) %> }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  // realtime update chart
+  const socket = io();
+  socket.on('new_click', data => {
+    const today = data.date; const idx = clicksChart.data.labels.indexOf(today);
+    if (idx !== -1) clicksChart.data.datasets[0].data[idx]++; else { clicksChart.data.labels.push(today); clicksChart.data.datasets[0].data.push(1); }
+    clicksChart.update();
+  });
+
+  new Chart(document.getElementById('countryChart'), {
+    type: 'pie',
+    data: { labels: <%- JSON.stringify(topCountries.map(c => c.country || '??')) %>, datasets: [{ data: <%- JSON.stringify(topCountries.map(c => c.dataValues.count)) %> }] }
+  });
+  new Chart(document.getElementById('browserChart'), {
+    type: 'doughnut',
+    data: { labels: <%- JSON.stringify(topBrowsers.map(b => b.dataValues.browser || 'Other')) %>, datasets: [{ data: <%- JSON.stringify(topBrowsers.map(b => b.dataValues.count)) %> }] }
+  });
+  new Chart(document.getElementById('deviceChart'), {
+    type: 'pie',
+    data: { labels: <%- JSON.stringify(deviceDist.map(d => d.device || 'Unknown')) %>, datasets: [{ data: <%- JSON.stringify(deviceDist.map(d => d.dataValues.count)) %> }] }
+  });
+</script>
