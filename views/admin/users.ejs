@@ -1,0 +1,25 @@
+<h3 class="mb-3">Manajemen User</h3>
+<div class="card p-3">
+  <div class="table-responsive">
+    <table class="table table-striped datatable">
+      <thead class="table-dark"><tr><th>ID</th><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>
+      <tbody>
+        <% users.forEach(u => { %>
+        <tr>
+          <td><%= u.id %></td>
+          <td><%= u.name %></td>
+          <td><%= u.email %></td>
+          <td><span class="badge bg-<%= u.role==='admin'?'danger':'secondary' %>"><%= u.role %></span></td>
+          <td><span class="badge bg-<%= u.status==='active'?'success':'warning' %>"><%= u.status %></span></td>
+          <td>
+            <form method="post" action="/admin/users/<%= u.id %>/toggle">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm btn-outline-primary"><%= u.status==='active'?'Suspend':'Activate' %></button>
+            </form>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
