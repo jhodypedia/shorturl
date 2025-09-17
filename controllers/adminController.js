@@ -12,12 +12,12 @@ export const adminDashboard = async (req, res) => {
 
   const clicksByDay = await Click.findAll({
   attributes: [
-    [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'date'],
+    [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d')"), 'date'],
     [sequelize.fn('COUNT', sequelize.col('id')), 'count']
   ],
   where: { createdAt: { [Op.gte]: startDate } },
-  group: [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d')],
-  order: [[sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'ASC']]
+  group: [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d')")],
+  order: [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d') ASC")]
 });
 
   const topLinks = await Click.findAll({
@@ -85,12 +85,12 @@ export const linkStats = async (req, res) => {
 
   const clicksByDay = await Click.findAll({
   attributes: [
-    [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'date'],
+    [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d')"), 'date'],
     [sequelize.fn('COUNT', sequelize.col('id')), 'count']
   ],
   where: { linkId: id },
-  group: [sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d')],
-  order: [[sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m-%d'), 'ASC']]
+  group: [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d')")],
+  order: [sequelize.literal("DATE_FORMAT(`createdAt`, '%Y-%m-%d') ASC")]
 });
   const chartData = {
     labels: clicksByDay.map(c => c.dataValues.date),
