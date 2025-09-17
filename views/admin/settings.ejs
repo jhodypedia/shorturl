@@ -1,0 +1,16 @@
+<h3 class="mb-3">Pengaturan Website</h3>
+<div class="card p-3">
+  <form method="post" action="/admin/settings">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="mb-3"><label class="form-label">Nama Website</label><input class="form-control" name="site_name" value="<%= s.site_name || '' %>"></div>
+    <div class="mb-3"><label class="form-label">Adsterra URL (opsional)</label><input class="form-control" name="adsterra_url" value="<%= s.adsterra_url || '' %>"></div>
+    <div class="mb-3"><label class="form-label">Adsterra Script (kode JS)</label><textarea class="form-control" name="adsterra_script" rows="5"><%= s.adsterra_script || '' %></textarea></div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="anti_adblock" name="anti_adblock" value="on" <%= s.anti_adblock==='on'?'checked':'' %> >
+      <label class="form-check-label" for="anti_adblock">Aktifkan Anti-Adblock Warning</label>
+    </div>
+    <div class="mb-3"><label class="form-label">Brand Color</label><input class="form-control" name="brand_color" value="<%= s.brand_color || '' %>"></div>
+    <div class="mb-3"><label class="form-label">Brand Logo URL</label><input class="form-control" name="brand_logo" value="<%= s.brand_logo || '' %>"></div>
+    <button class="btn btn-primary">Simpan</button>
+  </form>
+</div>
