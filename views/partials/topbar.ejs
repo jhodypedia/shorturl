@@ -1,0 +1,13 @@
+<nav class="navbar navbar-expand navbar-light bg-light px-3">
+  <button id="sidebarToggle" class="btn btn-outline-primary me-2">☰</button>
+  <a class="navbar-brand fw-bold" href="/dashboard"><%= SITE_NAME %></a>
+  <div class="ms-auto d-flex align-items-center">
+    <button id="themeToggle" class="btn btn-outline-primary btn-sm me-3">🌓</button>
+    <% if (currentUser) { %>
+      <span class="me-2"><i class="fa fa-user"></i> <%= currentUser.name %> (<%= currentUser.role %>)</span>
+      <a href="/logout" class="btn btn-sm btn-danger">Logout</a>
+    <% } else { %>
+      <a href="/login" class="btn btn-sm btn-primary">Login</a>
+    <% } %>
+  </div>
+</nav>
