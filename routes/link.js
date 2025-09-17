@@ -11,7 +11,10 @@ r.get('/links/:id/edit', requireAuth, editLinkForm);
 r.post('/links/:id', requireAuth, updateLink);
 r.post('/links/:id/delete', requireAuth, deleteLink);
 
-r.get('/s/:code', openShort); // public
+app.get('/r/:code', (req, res, next) => {
+  res.locals.layout = false;
+  next();
+}, openShort);
 r.get('/adblock-warning', (req, res) => res.render('redirect/adblock_warning', { siteName: res.locals.SITE_NAME }));
 
 export default r;
