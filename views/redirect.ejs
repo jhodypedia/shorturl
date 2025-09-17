@@ -1,0 +1,12 @@
+<div class="redirect-body">
+  <div class="redirect-card">
+    <h2>Redirecting...</h2>
+    <p>Ke <span class="text-break"><%= url.originalUrl %></span> dalam <span id="cd"><%= countdown %></span> detik</p>
+    <div class="spinner"></div>
+    <script>
+      let s=<%= countdown %>; const el=document.getElementById('cd');
+      const it=setInterval(()=>{ s--; el.textContent=s; if(s<=0){ clearInterval(it); location.href="<%= url.originalUrl %>"; }},1000);
+    </script>
+    <%- adsterra %>
+  </div>
+</div>
