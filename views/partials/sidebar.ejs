@@ -1,0 +1,13 @@
+<div class="sidebar" id="sidebar">
+  <ul class="list-unstyled">
+    <li><a href="/dashboard" class="sidebar-link" data-title="Dashboard"><i class="fa fa-gauge"></i> <span class="sidebar-text">Dashboard</span></a></li>
+    <li><a href="/links" class="sidebar-link" data-title="Links"><i class="fa fa-link"></i> <span class="sidebar-text">Links</span></a></li>
+    <% if (currentUser && currentUser.role === 'admin') { %>
+      <hr/>
+      <li><a href="/admin" class="sidebar-link" data-title="Admin"><i class="fa fa-shield"></i> <span class="sidebar-text">Admin</span></a></li>
+      <li><a href="/admin/users" class="sidebar-link" data-title="Users"><i class="fa fa-users"></i> <span class="sidebar-text">Users</span></a></li>
+      <li><a href="/admin/links" class="sidebar-link" data-title="All Links"><i class="fa fa-list"></i> <span class="sidebar-text">All Links</span></a></li>
+      <li><a href="/admin/settings" class="sidebar-link" data-title="Settings"><i class="fa fa-gear"></i> <span class="sidebar-text">Settings</span></a></li>
+    <% } %>
+  </ul>
+</div>
