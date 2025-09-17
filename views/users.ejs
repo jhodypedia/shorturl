@@ -1,0 +1,9 @@
+<h3>Users</h3>
+<table class="table table-striped">
+  <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th></tr></thead>
+  <tbody>
+    <% list.forEach(u=>{ %>
+    <tr><td><%= u.email %></td><td><%= u.name %></td><td><%= u.role %></td><td><%= u.isActive ? 'Yes' : 'No' %></td></tr>
+    <% }) %>
+  </tbody>
+</table>
