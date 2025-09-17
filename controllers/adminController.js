@@ -2,6 +2,9 @@ import { User, Link, Click } from '../models/index.js';
 import { sequelize } from '../models/index.js';
 import { Op } from 'sequelize';
 
+// ===============================
+// Dashboard Admin
+// ===============================
 export const adminDashboard = async (req, res) => {
   const totalUsers = await User.count();
   const totalLinks = await Link.count();
@@ -10,11 +13,11 @@ export const adminDashboard = async (req, res) => {
   const range = parseInt(req.query.range || '7');
   const startDate = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
 
-  // ✅ raw query untuk clicksByDay
-  const [clicksByDay] = await sequelize.query(`
+  // ✅ Raw SQL untuk grouping by date (lebih aman di MySQL)
+  const clicksByDay = await sequelize.query(`
     SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') as date,
            COUNT(id) as count
-    FROM Clicks
+    FROM clicks
     WHERE createdAt >= :startDate
     GROUP BY DATE_FORMAT(createdAt, '%Y-%m-%d')
     ORDER BY date ASC
@@ -25,9 +28,15 @@ export const adminDashboard = async (req, res) => {
 
   const topLinks = await Click.findAll({
     attributes: ['linkId', [sequelize.fn('COUNT', sequelize.col('id')), 'clickCount']],
-    include: [{ model: Link, attributes: ['id','code','title'], include: [{ model: User, attributes: ['name'] }] }],
+    include: [
+      {
+        model: Link,
+        attributes: ['id', 'code', 'title'],
+        include: [{ model: User, attributes: ['name'] }]
+      }
+    ],
     where: { createdAt: { [Op.gte]: startDate } },
-    group: ['linkId','link.id','link->user.id'],
+    group: ['linkId', 'link.id', 'link->user.id'],
     order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
     limit: 5
   });
@@ -75,8 +84,11 @@ export const adminDashboard = async (req, res) => {
   });
 };
 
+// ===============================
+// Management Users
+// ===============================
 export const usersTable = async (req, res) => {
-  const users = await User.findAll({ order: [['id','DESC']] });
+  const users = await User.findAll({ order: [['id', 'DESC']] });
   res.render('admin/users', { users });
 };
 
@@ -88,24 +100,30 @@ export const toggleUser = async (req, res) => {
   res.redirect('/admin/users');
 };
 
+// ===============================
+// Management Links
+// ===============================
 export const linksTable = async (req, res) => {
   const links = await Link.findAll({
-    include: [{ model: User, attributes: ['name','email'] }],
-    order: [['id','DESC']]
+    include: [{ model: User, attributes: ['name', 'email'] }],
+    order: [['id', 'DESC']]
   });
   res.render('admin/links', { links });
 };
 
+// ===============================
+// Statistik per Link
+// ===============================
 export const linkStats = async (req, res) => {
   const { id } = req.params;
   const link = await Link.findByPk(id, { include: User });
   if (!link) return res.status(404).send('Link tidak ditemukan');
 
-  // ✅ raw query untuk clicksByDay per link
-  const [clicksByDay] = await sequelize.query(`
+  // ✅ Raw SQL untuk grouping by date per link
+  const clicksByDay = await sequelize.query(`
     SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') as date,
            COUNT(id) as count
-    FROM Clicks
+    FROM clicks
     WHERE linkId = :id
     GROUP BY DATE_FORMAT(createdAt, '%Y-%m-%d')
     ORDER BY date ASC
@@ -144,7 +162,7 @@ export const linkStats = async (req, res) => {
 
   const clicks = await Click.findAll({
     where: { linkId: id },
-    order: [['id','DESC']]
+    order: [['id', 'DESC']]
   });
 
   res.render('admin/stats', {
