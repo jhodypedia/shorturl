@@ -5,44 +5,93 @@ import geoip from 'geoip-lite';
 
 const genCode = () => uuidv4().split('-')[0];
 
+// ===============================
+// Dashboard & Links (User)
+// ===============================
 export const dashboard = async (req, res) => {
-  const links = await Link.findAll({ where: { userId: req.session.user.id }, order: [['id','DESC']] });
+  const links = await Link.findAll({ 
+    where: { userId: req.session.user.id }, 
+    order: [['id','DESC']] 
+  });
   res.render('user/dashboard', { links });
 };
+
 export const listLinks = async (req, res) => {
-  const links = await Link.findAll({ where: { userId: req.session.user.id }, order: [['id','DESC']] });
+  const links = await Link.findAll({ 
+    where: { userId: req.session.user.id }, 
+    order: [['id','DESC']] 
+  });
   res.render('user/links', { links });
 };
-export const createLinkForm = (req, res) => res.render('user/link_new');
+
+export const createLinkForm = (req, res) => 
+  res.render('user/link_new');
+
 export const createLink = async (req, res) => {
   const { target, title } = req.body;
   const code = genCode();
-  await Link.create({ code, target, title, userId: req.session.user.id });
+
+  await Link.create({ 
+    code, 
+    target, 
+    title, 
+    userId: req.session.user.id 
+  });
 
   const io = req.app.get('io');
   io.emit('update_counter', { type: 'links', value: await Link.count() });
 
   res.redirect('/links');
 };
+
 export const editLinkForm = async (req, res) => {
-  const link = await Link.findOne({ where: { id: req.params.id, userId: req.session.user.id } });
+  const link = await Link.findOne({ 
+    where: { id: req.params.id, userId: req.session.user.id } 
+  });
   if (!link) return res.redirect('/links');
   res.render('user/link_edit', { link });
 };
+
 export const updateLink = async (req, res) => {
   const { target, title, enabled } = req.body;
-  await Link.update({ target, title, enabled: enabled === 'on' }, { where: { id: req.params.id, userId: req.session.user.id } });
-  res.redirect('/links');
-};
-export const deleteLink = async (req, res) => {
-  await Link.destroy({ where: { id: req.params.id, userId: req.session.user.id } });
+  await Link.update(
+    { target, title, enabled: enabled === 'on' },
+    { where: { id: req.params.id, userId: req.session.user.id } }
+  );
   res.redirect('/links');
 };
 
-// public short open
+// ✅ Fix delete link (hapus klik dulu, baru link)
+export const deleteLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const link = await Link.findOne({ where: { id, userId: req.session.user.id } });
+    if (!link) {
+      req.flash('error', 'Link tidak ditemukan');
+      return res.redirect('/links');
+    }
+
+    await Click.destroy({ where: { linkId: id } }); // hapus semua klik
+    await Link.destroy({ where: { id, userId: req.session.user.id } }); // hapus link
+
+    req.flash('success', 'Link berhasil dihapus');
+    res.redirect('/links');
+  } catch (err) {
+    console.error('Error delete link:', err);
+    res.status(500).send('Terjadi error saat menghapus link');
+  }
+};
+
+// ===============================
+// Public Short Open
+// ===============================
 export const openShort = async (req, res) => {
   const { code } = req.params;
-  const link = await Link.findOne({ where: { code, enabled: true }, include: [{ model: User }] });
+  const link = await Link.findOne({ 
+    where: { code, enabled: true }, 
+    include: [{ model: User }] 
+  });
   if (!link) return res.status(404).send('Link tidak ditemukan');
 
   const parser = new UAParser(req.headers['user-agent']);
@@ -59,16 +108,31 @@ export const openShort = async (req, res) => {
     referer: req.get('referer') || null
   });
 
-  // realtime
+  // Realtime update
   const io = req.app.get('io');
-  io.emit('new_click', { link: link.code, linkId: link.id, user: link.userId, ip, country: geo?.country || '??', date: newClick.createdAt.toISOString().split('T')[0] });
+  io.emit('new_click', { 
+    link: link.code, 
+    linkId: link.id, 
+    user: link.userId, 
+    ip, 
+    country: geo?.country || '??', 
+    date: newClick.createdAt.toISOString().split('T')[0] 
+  });
   io.emit('update_counter', { type: 'clicks', value: await Click.count() });
 
-  // settings
+  // Settings
   const siteName = (await Setting.findByPk('site_name'))?.value || process.env.SITE_NAME || 'ShortPro';
   const adUrl = (await Setting.findByPk('adsterra_url'))?.value || process.env.ADSTERRA_URL || '';
   const adScript = (await Setting.findByPk('adsterra_script'))?.value || '';
   const antiAdblock = (await Setting.findByPk('anti_adblock'))?.value || 'off';
 
-  res.render('redirect/ads', { layout: false, target: link.target, adUrl, adScript, siteName, antiAdblock });
+  // Render tanpa layout (langsung ads page)
+  res.render('redirect/ads', { 
+    layout: false, 
+    target: link.target, 
+    adUrl, 
+    adScript, 
+    siteName, 
+    antiAdblock 
+  });
 };
