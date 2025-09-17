@@ -13,7 +13,7 @@ export const adminDashboard = async (req, res) => {
   const range = parseInt(req.query.range || '7');
   const startDate = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
 
-  // ✅ Raw SQL untuk grouping by date (lebih aman di MySQL)
+  // ✅ Raw SQL untuk statistik klik per hari
   const clicksByDay = await sequelize.query(`
     SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') as date,
            COUNT(id) as count
@@ -119,7 +119,7 @@ export const linkStats = async (req, res) => {
   const link = await Link.findByPk(id, { include: User });
   if (!link) return res.status(404).send('Link tidak ditemukan');
 
-  // ✅ Raw SQL untuk grouping by date per link
+  // ✅ Raw SQL untuk statistik klik per hari per link
   const clicksByDay = await sequelize.query(`
     SELECT DATE_FORMAT(createdAt, '%Y-%m-%d') as date,
            COUNT(id) as count
