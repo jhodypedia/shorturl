@@ -1,0 +1,6 @@
+<h3>Lupa Password</h3>
+<form method="post" action="/auth/forgot">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="mb-3"><input type="email" name="email" class="form-control" placeholder="Email" required></div>
+  <button class="btn btn-warning">Kirim Reset Link</button>
+</form>
