@@ -62,27 +62,47 @@ export const updateLink = async (req, res) => {
 };
 
 // ✅ Fix delete link (hapus klik dulu, baru link)
+// ==========================
+// Hapus link oleh User
+// ==========================
 export const deleteLink = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const link = await Link.findOne({ where: { id, userId: req.session.user.id } });
-    if (!link) {
-      req.flash('error', 'Link tidak ditemukan');
-      return res.redirect('/links');
-    }
+    // Hapus semua klik terkait link
+    await Click.destroy({ where: { linkId: id } });
 
-    await Click.destroy({ where: { linkId: id } }); // hapus semua klik
-    await Link.destroy({ where: { id, userId: req.session.user.id } }); // hapus link
+    // Hapus link hanya jika milik user yang login
+    await Link.destroy({ where: { id, userId: req.session.user.id } });
 
-    req.flash('success', 'Link berhasil dihapus');
+    // Redirect ke daftar link user
     res.redirect('/links');
   } catch (err) {
-    console.error('Error delete link:', err);
+    console.error('Error delete link (user):', err);
     res.status(500).send('Terjadi error saat menghapus link');
   }
 };
 
+// ==========================
+// Hapus link oleh Admin
+// ==========================
+export const adminDeleteLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Hapus semua klik terkait link
+    await Click.destroy({ where: { linkId: id } });
+
+    // Hapus link (tanpa cek userId, karena admin bebas hapus semua)
+    await Link.destroy({ where: { id } });
+
+    // Redirect ke tabel link admin
+    res.redirect('/admin/links');
+  } catch (err) {
+    console.error('Error delete link (admin):', err);
+    res.status(500).send('Terjadi error saat menghapus link');
+  }
+};
 // ===============================
 // Public Short Open
 // ===============================
