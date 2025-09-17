@@ -1,11 +1,13 @@
-import db from "../config/database.js";
-import User from "./user.model.js";
-import Url from "./url.model.js";
-import Setting from "./setting.model.js";
-import Server from "./server.model.js";
-import Click from "./click.model.js";
+import sequelize from '../config/db.js';
+import User from './User.js';
+import Link from './Link.js';
+import Click from './Click.js';
+import Setting from './Setting.js';
 
-User.hasMany(Url, { foreignKey: "userId" });
-Url.belongsTo(User, { foreignKey: "userId" });
+User.hasMany(Link, { foreignKey: 'userId' });
+Link.belongsTo(User, { foreignKey: 'userId' });
 
-export { db, User, Url, Setting, Server, Click };
+Link.hasMany(Click, { foreignKey: 'linkId' });
+Click.belongsTo(Link, { foreignKey: 'linkId' });
+
+export { sequelize, User, Link, Click, Setting };
